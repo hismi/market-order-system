@@ -610,7 +610,14 @@ function formatDateTime(value) {
   return new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "short",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(parseApiDate(value));
+}
+
+function parseApiDate(value) {
+  const text = String(value || "").trim();
+  if (!text) return new Date(Number.NaN);
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) return new Date(text);
+  return new Date(`${text}Z`);
 }
 
 function buildWhatsappSupportUrl(phoneNumber) {

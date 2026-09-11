@@ -65,7 +65,7 @@ function money(value) {
 function bindEvents() {
   elements.loginForm.addEventListener("submit", login);
   elements.logoutButton.addEventListener("click", logout);
-  elements.soundToggleButton.addEventListener("click", toggleSoundAlerts);
+  elements.soundToggleButton.addEventListener("click", handleSoundToggleClick);
   elements.refreshButton.addEventListener("click", () => {
     unlockAudioAlerts();
     loadOrders();
@@ -252,21 +252,28 @@ function notifyNewOrders(count) {
   playNewOrderAlert();
 }
 
-function toggleSoundAlerts() {
-  audioAlerts.enabled = !audioAlerts.enabled;
+function handleSoundToggleClick() {
+  if (!audioAlerts.enabled) {
+    audioAlerts.enabled = true;
+    window.localStorage.setItem(SOUND_ENABLED_STORAGE_KEY, "true");
+    unlockAudioAlerts({ playTest: true });
+    return;
+  }
+
+  if (!audioAlerts.unlocked) {
+    unlockAudioAlerts({ playTest: true });
+    return;
+  }
+
+  audioAlerts.enabled = false;
   window.localStorage.setItem(
     SOUND_ENABLED_STORAGE_KEY,
-    audioAlerts.enabled ? "true" : "false",
+    "false",
   );
-
-  if (audioAlerts.enabled) {
-    unlockAudioAlerts();
-  } else {
-    renderSoundToggle();
-  }
+  renderSoundToggle();
 }
 
-async function unlockAudioAlerts() {
+async function unlockAudioAlerts(options = {}) {
   if (!audioAlerts.enabled) {
     renderSoundToggle();
     return;
@@ -293,6 +300,9 @@ async function unlockAudioAlerts() {
   }
 
   renderSoundToggle();
+  if (audioAlerts.unlocked && options.playTest === true) {
+    playNewOrderAlert();
+  }
 }
 
 function playNewOrderAlert() {
@@ -328,6 +338,7 @@ function playTone(frequency, startTime, duration) {
 function renderSoundToggle() {
   const isReady = audioAlerts.enabled && audioAlerts.unlocked;
   elements.soundToggleButton.classList.toggle("is-muted", !isReady);
+  elements.soundToggleButton.setAttribute("aria-pressed", String(audioAlerts.enabled));
 
   if (!audioAlerts.enabled) {
     elements.soundToggleButton.textContent = "Ses kapalı";
@@ -515,13 +526,20 @@ function formatAddress(order) {
 }
 
 function timeAgo(value) {
-  const diffMs = Date.now() - new Date(value).getTime();
+  const diffMs = Date.now() - parseApiDate(value).getTime();
   const minutes = Math.max(Math.floor(diffMs / 60000), 0);
   if (minutes < 1) return "Az önce";
   if (minutes < 60) return `${minutes} dakika önce`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} saat önce`;
   return `${Math.floor(hours / 24)} gün önce`;
+}
+
+function parseApiDate(value) {
+  const text = String(value || "").trim();
+  if (!text) return new Date(Number.NaN);
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) return new Date(text);
+  return new Date(`${text}Z`);
 }
 
 function formatClock(value) {

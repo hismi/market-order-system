@@ -112,6 +112,7 @@ def test_create_order_recalculates_totals_and_ignores_frontend_money_fields(
     }
     assert tracking_data["order_number"] == data["order_number"]
     assert tracking_data["status"] == "NEW"
+    assert tracking_data["created_at"].endswith("Z")
     assert tracking_data["customer_name"] == "Sa** Hi***"
     assert tracking_data["phone"] == "05** *** ** 33"
     assert tracking_data["delivery_area"] == "Me**** Ma*******"

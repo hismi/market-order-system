@@ -60,6 +60,7 @@ def test_employee_can_list_and_move_order_through_valid_statuses(
     )
     assert list_response.status_code == 200
     assert list_response.json()[0]["status"] == "NEW"
+    assert list_response.json()[0]["created_at"].endswith("Z")
 
     approve_response = client.post(
         f"/api/employee/orders/{order_id}/approve",

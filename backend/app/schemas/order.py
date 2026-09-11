@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
 
@@ -6,6 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 
 PaymentMethod = Literal["CASH_ON_DELIVERY", "CARD_ON_DELIVERY"]
 UnavailablePolicy = Literal["CALL_CUSTOMER", "REMOVE_ITEM", "SEND_SIMILAR"]
+
+
+def serialize_utc_datetime(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 class OrderItemCreate(BaseModel):
@@ -127,6 +133,10 @@ class OrderTrackRead(BaseModel):
     def serialize_money(self, value: Decimal) -> str:
         return f"{value:.2f}"
 
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return serialize_utc_datetime(value)
+
 
 class EmployeeOrderRead(BaseModel):
     id: int
@@ -157,6 +167,10 @@ class EmployeeOrderRead(BaseModel):
     @field_serializer("subtotal", "delivery_fee", "grand_total")
     def serialize_money(self, value: Decimal) -> str:
         return f"{value:.2f}"
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return serialize_utc_datetime(value)
 
 
 class AdminOrderSummary(BaseModel):
