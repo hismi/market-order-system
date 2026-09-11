@@ -418,6 +418,10 @@ select:disabled {
   font-weight: 800;
 }
 
+.sound-toggle-button.is-muted {
+  color: var(--muted);
+}
+
 .search-box {
   display: grid;
   gap: 7px;

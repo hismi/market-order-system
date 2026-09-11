@@ -1,5 +1,6 @@
 const API_BASE_URL = "http://127.0.0.1:8000";
 const TOKEN_STORAGE_KEY = "market-order-system-employee-token";
+const SOUND_ENABLED_STORAGE_KEY = "market-order-system-employee-sound-enabled";
 const ORDER_REFRESH_INTERVAL_MS = 15000;
 
 const statusLabels = {
@@ -30,6 +31,13 @@ const state = {
 
 let orderRefreshTimer = null;
 let isLoadingOrders = false;
+const audioAlerts = {
+  enabled: window.localStorage.getItem(SOUND_ENABLED_STORAGE_KEY) !== "false",
+  context: null,
+  unlocked: false,
+  knownNewOrderKeys: new Set(),
+  hasOrderSnapshot: false,
+};
 
 const elements = {
   loginPanel: document.querySelector("#loginPanel"),
@@ -42,6 +50,7 @@ const elements = {
   orderCount: document.querySelector("#orderCount"),
   autoRefreshText: document.querySelector("#autoRefreshText"),
   userText: document.querySelector("#userText"),
+  soundToggleButton: document.querySelector("#soundToggleButton"),
   refreshButton: document.querySelector("#refreshButton"),
   logoutButton: document.querySelector("#logoutButton"),
 };
@@ -56,10 +65,15 @@ function money(value) {
 function bindEvents() {
   elements.loginForm.addEventListener("submit", login);
   elements.logoutButton.addEventListener("click", logout);
-  elements.refreshButton.addEventListener("click", () => loadOrders());
+  elements.soundToggleButton.addEventListener("click", toggleSoundAlerts);
+  elements.refreshButton.addEventListener("click", () => {
+    unlockAudioAlerts();
+    loadOrders();
+  });
   elements.statusTabs.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-status]");
     if (!button) return;
+    unlockAudioAlerts();
     state.selectedStatus = button.dataset.status;
     renderStatusTabs();
     loadOrders();
@@ -68,6 +82,7 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
+  renderSoundToggle();
 
   if (!state.token) {
     showLogin();
@@ -85,6 +100,7 @@ async function init() {
 
 async function login(event) {
   event.preventDefault();
+  unlockAudioAlerts();
   elements.loginMessage.hidden = true;
 
   const formData = new FormData(elements.loginForm);
@@ -133,6 +149,7 @@ function showOrders() {
   elements.ordersPanel.hidden = false;
   elements.logoutButton.hidden = false;
   elements.userText.textContent = `${state.currentUser.full_name} (${state.currentUser.role})`;
+  renderSoundToggle();
   startOrderAutoRefresh();
 }
 
@@ -149,6 +166,9 @@ async function loadOrders(options = {}) {
     state.orders = await apiFetch(`/api/employee/orders?status=${state.selectedStatus}`);
     renderOrders();
     updateAutoRefreshText();
+    if (state.selectedStatus === "NEW") {
+      handleNewOrderSnapshot(state.orders, { alert: true });
+    }
   } catch (error) {
     if (error.status === 401) {
       logout();
@@ -169,9 +189,16 @@ function startOrderAutoRefresh() {
   stopOrderAutoRefresh();
   updateAutoRefreshText("Otomatik yenileme açık");
   orderRefreshTimer = window.setInterval(
-    () => loadOrders({ silent: true }),
+    refreshOrdersAndAlerts,
     ORDER_REFRESH_INTERVAL_MS,
   );
+}
+
+async function refreshOrdersAndAlerts() {
+  await loadOrders({ silent: true });
+  if (state.selectedStatus !== "NEW") {
+    await checkNewOrdersForAlert();
+  }
 }
 
 function stopOrderAutoRefresh() {
@@ -183,6 +210,145 @@ function stopOrderAutoRefresh() {
 function updateAutoRefreshText(message) {
   const text = message || `Son güncelleme ${formatClock(new Date())}`;
   elements.autoRefreshText.textContent = text;
+}
+
+async function checkNewOrdersForAlert() {
+  try {
+    const newOrders = await apiFetch("/api/employee/orders?status=NEW");
+    handleNewOrderSnapshot(newOrders, { alert: true });
+  } catch (error) {
+    if (error.status === 401) {
+      logout();
+    }
+  }
+}
+
+function handleNewOrderSnapshot(orders, options = {}) {
+  const shouldAlert = options.alert === true;
+  const newOrderKeys = new Set(
+    orders
+      .filter((order) => order.status === "NEW")
+      .map(getOrderAlertKey),
+  );
+  const newArrivalCount = audioAlerts.hasOrderSnapshot
+    ? Array.from(newOrderKeys).filter((key) => !audioAlerts.knownNewOrderKeys.has(key)).length
+    : 0;
+
+  audioAlerts.knownNewOrderKeys = newOrderKeys;
+  audioAlerts.hasOrderSnapshot = true;
+
+  if (shouldAlert && newArrivalCount > 0) {
+    notifyNewOrders(newArrivalCount);
+  }
+}
+
+function getOrderAlertKey(order) {
+  return String(order.id || order.order_number);
+}
+
+function notifyNewOrders(count) {
+  updateAutoRefreshText(count === 1 ? "Yeni sipariş geldi" : `${count} yeni sipariş geldi`);
+  flashDocumentTitle(count);
+  playNewOrderAlert();
+}
+
+function toggleSoundAlerts() {
+  audioAlerts.enabled = !audioAlerts.enabled;
+  window.localStorage.setItem(
+    SOUND_ENABLED_STORAGE_KEY,
+    audioAlerts.enabled ? "true" : "false",
+  );
+
+  if (audioAlerts.enabled) {
+    unlockAudioAlerts();
+  } else {
+    renderSoundToggle();
+  }
+}
+
+async function unlockAudioAlerts() {
+  if (!audioAlerts.enabled) {
+    renderSoundToggle();
+    return;
+  }
+
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) {
+    audioAlerts.enabled = false;
+    window.localStorage.setItem(SOUND_ENABLED_STORAGE_KEY, "false");
+    renderSoundToggle();
+    return;
+  }
+
+  try {
+    if (!audioAlerts.context) {
+      audioAlerts.context = new AudioContextConstructor();
+    }
+    if (audioAlerts.context.state === "suspended") {
+      await audioAlerts.context.resume();
+    }
+    audioAlerts.unlocked = audioAlerts.context.state === "running";
+  } catch {
+    audioAlerts.unlocked = false;
+  }
+
+  renderSoundToggle();
+}
+
+function playNewOrderAlert() {
+  if (!audioAlerts.enabled || !audioAlerts.unlocked || !audioAlerts.context) {
+    unlockAudioAlerts();
+    return;
+  }
+
+  try {
+    const startTime = audioAlerts.context.currentTime + 0.02;
+    playTone(880, startTime, 0.16);
+    playTone(1175, startTime + 0.2, 0.18);
+  } catch {
+    audioAlerts.unlocked = false;
+    renderSoundToggle();
+  }
+}
+
+function playTone(frequency, startTime, duration) {
+  const oscillator = audioAlerts.context.createOscillator();
+  const gain = audioAlerts.context.createGain();
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(frequency, startTime);
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.22, startTime + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  oscillator.connect(gain);
+  gain.connect(audioAlerts.context.destination);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration + 0.04);
+}
+
+function renderSoundToggle() {
+  const isReady = audioAlerts.enabled && audioAlerts.unlocked;
+  elements.soundToggleButton.classList.toggle("is-muted", !isReady);
+
+  if (!audioAlerts.enabled) {
+    elements.soundToggleButton.textContent = "Ses kapalı";
+  } else if (!audioAlerts.unlocked) {
+    elements.soundToggleButton.textContent = "Sesi Aç";
+  } else {
+    elements.soundToggleButton.textContent = "Ses açık";
+  }
+}
+
+function flashDocumentTitle(count) {
+  const originalTitle = document.title.replace(/^Yeni sipariş(?: \(\d+\))? - /, "");
+  document.title = count === 1
+    ? `Yeni sipariş - ${originalTitle}`
+    : `Yeni sipariş (${count}) - ${originalTitle}`;
+
+  window.setTimeout(() => {
+    if (document.title.startsWith("Yeni sipariş")) {
+      document.title = originalTitle;
+    }
+  }, 8000);
 }
 
 function renderStatusTabs() {

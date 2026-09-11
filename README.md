@@ -42,6 +42,7 @@ Asama 2-4 baslangici:
 - Production guvenlik ayarlari kontrolu eklendi.
 - Market calisma saatleri backend tarafindan otomatik siparis kabul kuralina baglandi.
 - Musteri ekrani market durumunu periyodik yeniler; admin ve calisan siparis listeleri otomatik yenilenir.
+- Yeni siparis geldiginde admin ve calisan panellerinde sesli uyari eklendi.
 
 ## Calistirma
 
@@ -182,6 +183,7 @@ Admin panelinden siparis tarafinda su islemler yapilabilir:
 
 - Siparisleri durumuna gore listeleme
 - Admin ve calisan panelinde siparis listesinin otomatik yenilenmesi
+- Yeni siparis geldiginde sesli uyari alma
 - Aktif siparis, yeni siparis, teslim edilen ciro ve aktif toplam ozetini gorme
 - Yeni siparisi onaylama veya iptal etme
 - Onaylanan sipariste urun stoklarini otomatik dusme
