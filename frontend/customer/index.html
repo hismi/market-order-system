@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Yerel Market</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Günlük market siparişi</p>
+        <h1 id="marketName">Yerel Market</h1>
+      </div>
+      <div class="header-actions">
+        <a class="support-link" id="whatsappSupportLink" href="#" target="_blank" rel="noopener" aria-label="WhatsApp canlı destek" hidden>
+          WhatsApp Destek
+        </a>
+        <div class="status-pill" id="marketStatus">Açık</div>
+      </div>
+    </header>
+
+    <main class="catalog-shell">
+      <section class="tracking-section" aria-label="Sipariş takibi">
+        <form class="tracking-form" id="trackingForm">
+          <div>
+            <p class="eyebrow">Sipariş Takibi</p>
+            <h2>Sipariş Durumu</h2>
+          </div>
+          <label>
+            <span>Sipariş no</span>
+            <input name="order_number" placeholder="MKT-7H3Q-9X2K" required minlength="3" maxlength="32" />
+          </label>
+          <label>
+            <span>Telefon</span>
+            <input name="phone" type="tel" autocomplete="tel" placeholder="0532 111 22 33" required minlength="10" maxlength="32" />
+          </label>
+          <button class="secondary-button" id="trackOrderButton" type="submit">Durumu Göster</button>
+        </form>
+        <div class="tracking-result" id="trackingResult" hidden></div>
+      </section>
+
+      <section class="search-section" aria-label="Ürün arama ve kategori filtreleri">
+        <label class="search-box">
+          <span>Ürün ara</span>
+          <input id="searchInput" type="search" placeholder="Elma, su, pirinç..." autocomplete="off" />
+        </label>
+
+        <div class="category-strip" id="categoryStrip" aria-label="Kategoriler">
+          <button class="category-chip is-active" type="button" data-category="">Tümü</button>
+        </div>
+      </section>
+
+      <section class="product-section" aria-label="Ürünler">
+        <div class="section-heading">
+          <h2>Ürünler</h2>
+          <span id="productCount">0 ürün</span>
+        </div>
+        <div class="product-grid" id="productGrid"></div>
+        <div class="empty-state" id="emptyState" hidden>
+          <strong>Ürün bulunamadı</strong>
+          <span>Aramayı veya kategori seçimini değiştirin.</span>
+        </div>
+      </section>
+    </main>
+
+    <button class="cart-bar" id="openCartButton" type="button" aria-label="Sepeti gör">
+      <span>
+        <strong>Sepeti Gör</strong>
+        <small id="cartItemCount">0 ürün</small>
+      </span>
+      <span id="cartBarTotal">0,00 TL</span>
+    </button>
+
+    <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+    <aside class="cart-drawer" id="cartDrawer" aria-label="Sepet" aria-hidden="true">
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow">Sepet</p>
+          <h2>Seçilen Ürünler</h2>
+        </div>
+        <button class="icon-button" id="closeCartButton" type="button" aria-label="Sepeti kapat">×</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="cart-items" id="cartItems"></div>
+
+        <div class="cart-summary">
+          <div class="minimum-message" id="minimumMessage"></div>
+          <div class="summary-row">
+            <span>Ara Toplam</span>
+            <strong id="subtotalText">0,00 TL</strong>
+          </div>
+          <div class="summary-row">
+            <span>Gönderim</span>
+            <strong id="deliveryFeeText">0,00 TL</strong>
+          </div>
+          <div class="summary-row total">
+            <span>Genel Toplam</span>
+            <strong id="grandTotalText">0,00 TL</strong>
+          </div>
+          <button class="checkout-button" id="checkoutButton" type="button">Teslimat Bilgilerini Doldur</button>
+
+          <form class="checkout-form" id="checkoutForm">
+            <div class="form-heading">
+              <h3>Teslimat Bilgileri</h3>
+              <p>Online ödeme alınmaz. Ödeme teslimatta nakit veya POS ile yapılır.</p>
+            </div>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Ad</span>
+                <input name="customer_first_name" autocomplete="given-name" required minlength="2" maxlength="80" />
+              </label>
+              <label>
+                <span>Soyad</span>
+                <input name="customer_last_name" autocomplete="family-name" required minlength="2" maxlength="80" />
+              </label>
+            </div>
+
+            <label>
+              <span>Telefon</span>
+              <input name="phone" type="tel" autocomplete="tel" placeholder="0532 111 22 33" required minlength="10" maxlength="32" />
+            </label>
+
+            <label>
+              <span>Teslimat bölgesi</span>
+              <select name="delivery_area_id" id="deliveryAreaSelect" required></select>
+            </label>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Mahalle</span>
+                <input name="neighborhood" required minlength="2" maxlength="120" />
+              </label>
+              <label>
+                <span>Sokak</span>
+                <input name="street" required minlength="2" maxlength="160" />
+              </label>
+            </div>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Apartman</span>
+                <input name="apartment" maxlength="80" />
+              </label>
+              <label>
+                <span>Daire</span>
+                <input name="flat" maxlength="40" />
+              </label>
+            </div>
+
+            <label>
+              <span>Açık adres</span>
+              <textarea name="address_line" required minlength="10" maxlength="500" rows="3"></textarea>
+            </label>
+
+            <label>
+              <span>Adres tarifi</span>
+              <textarea name="address_directions" maxlength="500" rows="2"></textarea>
+            </label>
+
+            <label>
+              <span>Sipariş notu</span>
+              <textarea name="order_note" maxlength="500" rows="2"></textarea>
+            </label>
+
+            <label>
+              <span>Ödeme yöntemi</span>
+              <select name="payment_method" required>
+                <option value="CASH_ON_DELIVERY">Kapıda Nakit</option>
+                <option value="CARD_ON_DELIVERY">Kapıda Kart / POS</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Ürün bulunamazsa</span>
+              <select name="unavailable_policy" required>
+                <option value="CALL_CUSTOMER">Beni ara</option>
+                <option value="REMOVE_ITEM">Ürünü siparişten çıkar</option>
+                <option value="SEND_SIMILAR">Benzer ürün gönderilebilir</option>
+              </select>
+            </label>
+
+            <div class="order-result" id="orderResult" hidden></div>
+            <button class="checkout-button" id="submitOrderButton" type="submit">Siparişi Ver</button>
+          </form>
+        </div>
+      </div>
+    </aside>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

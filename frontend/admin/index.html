@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Paneli</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Market Yönetim</p>
+        <h1>Admin Paneli</h1>
+      </div>
+      <button class="ghost-button" id="logoutButton" type="button" hidden>Çıkış</button>
+    </header>
+
+    <main class="app-shell">
+      <section class="login-panel" id="loginPanel">
+        <form class="panel-form login-form" id="loginForm">
+          <div>
+            <p class="eyebrow">Giriş</p>
+            <h2>Market ayarlarını yönet</h2>
+          </div>
+
+          <label>
+            <span>Kullanıcı adı</span>
+            <input name="username" autocomplete="username" value="admin" required />
+          </label>
+
+          <label>
+            <span>Şifre</span>
+            <input name="password" type="password" autocomplete="current-password" required minlength="8" />
+          </label>
+
+          <div class="form-message is-error" id="loginMessage" hidden></div>
+          <button class="primary-button" type="submit">Giriş Yap</button>
+        </form>
+      </section>
+
+      <section class="admin-panel" id="adminPanel" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Yönetim</p>
+            <h2>Market operasyon ayarları</h2>
+          </div>
+          <span class="user-pill" id="userText"></span>
+        </div>
+
+        <nav class="section-tabs" aria-label="Admin bölümleri">
+          <button class="section-tab is-active" type="button" data-section="system-status">Sistem Durumu</button>
+          <button class="section-tab" type="button" data-section="orders">Siparişler</button>
+          <button class="section-tab" type="button" data-section="reports">Raporlar</button>
+          <button class="section-tab" type="button" data-section="settings">Market Ayarları</button>
+          <button class="section-tab" type="button" data-section="categories">Kategoriler</button>
+          <button class="section-tab" type="button" data-section="products">Ürünler</button>
+          <button class="section-tab" type="button" data-section="delivery-areas">Teslimat Bölgeleri</button>
+          <button class="section-tab" type="button" data-section="users">Kullanıcılar</button>
+          <button class="section-tab" type="button" data-section="audit-logs">İşlem Geçmişi</button>
+          <button class="section-tab" type="button" data-section="backups">Yedekleme</button>
+          <button class="section-tab" type="button" data-section="account">Hesabım</button>
+        </nav>
+
+        <section class="admin-section system-status-section" id="systemStatusSection" data-section-panel="system-status">
+          <div class="list-panel">
+            <div class="list-heading">
+              <div>
+                <p class="eyebrow">Kontrol</p>
+                <h2>Sistem durumu</h2>
+              </div>
+              <button class="ghost-button" id="refreshSystemStatusButton" type="button">Yenile</button>
+            </div>
+
+            <div class="summary-strip system-status-grid">
+              <div>
+                <span>API</span>
+                <strong id="statusApiText">-</strong>
+              </div>
+              <div>
+                <span>Market</span>
+                <strong id="statusMarketText">-</strong>
+              </div>
+              <div>
+                <span>Ortam</span>
+                <strong id="statusEnvText">-</strong>
+              </div>
+              <div>
+                <span>Ödeme</span>
+                <strong id="statusPaymentText">-</strong>
+              </div>
+              <div>
+                <span>Ürünler</span>
+                <strong id="statusProductsText">-</strong>
+              </div>
+              <div>
+                <span>Kategoriler</span>
+                <strong id="statusCategoriesText">-</strong>
+              </div>
+              <div>
+                <span>Teslimat Bölgeleri</span>
+                <strong id="statusDeliveryAreasText">-</strong>
+              </div>
+              <div>
+                <span>Siparişler</span>
+                <strong id="statusOrdersText">-</strong>
+              </div>
+            </div>
+
+            <div class="status-detail-grid">
+              <div class="status-box">
+                <h3>Son hareketler</h3>
+                <div class="record-meta">
+                  <div><span>Son sipariş</span><strong id="statusLastOrderText">-</strong></div>
+                  <div><span>Son işlem</span><strong id="statusLastAuditText">-</strong></div>
+                  <div><span>Son yedek</span><strong id="statusLastBackupText">-</strong></div>
+                </div>
+              </div>
+
+              <div class="status-box">
+                <h3>Güvenlik ve kurallar</h3>
+                <ul class="status-check-list" id="statusSecurityList"></ul>
+              </div>
+            </div>
+
+            <div class="form-message is-error" id="systemStatusMessage" hidden></div>
+          </div>
+        </section>
+
+        <section class="admin-section orders-section" id="ordersSection" data-section-panel="orders" hidden>
+          <div class="summary-strip order-summary-grid" id="ordersSummary">
+            <div>
+              <span>Aktif Sipariş</span>
+              <strong id="activeOrdersText">0</strong>
+            </div>
+            <div>
+              <span>Yeni</span>
+              <strong id="newOrdersText">0</strong>
+            </div>
+            <div>
+              <span>Teslim Edilen Ciro</span>
+              <strong id="deliveredRevenueText">0,00 TL</strong>
+            </div>
+            <div>
+              <span>Aktif Toplam</span>
+              <strong id="activeGrandTotalText">0,00 TL</strong>
+            </div>
+          </div>
+
+          <div class="list-panel">
+            <div class="list-heading">
+              <h2>Siparişler</h2>
+              <button class="ghost-button" id="refreshOrdersButton" type="button">Yenile</button>
+            </div>
+            <label class="search-box">
+              <span>Durum filtresi</span>
+              <select id="orderStatusFilter">
+                <option value="">Tüm siparişler</option>
+                <option value="NEW">Yeni</option>
+                <option value="PREPARING">Hazırlanıyor</option>
+                <option value="ON_THE_WAY">Yolda</option>
+                <option value="DELIVERED">Teslim edildi</option>
+                <option value="CANCELLED">İptal</option>
+              </select>
+            </label>
+            <div class="record-list" id="ordersList"></div>
+          </div>
+        </section>
+
+        <section class="admin-section reports-section" id="reportsSection" data-section-panel="reports" hidden>
+          <form class="panel-form report-filter-form" id="reportFilterForm">
+            <div>
+              <p class="eyebrow">Rapor</p>
+              <h2>Sipariş ve satış özeti</h2>
+            </div>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Başlangıç tarihi</span>
+                <input id="reportStartDate" name="start_date" type="date" />
+              </label>
+              <label>
+                <span>Bitiş tarihi</span>
+                <input id="reportEndDate" name="end_date" type="date" />
+              </label>
+            </div>
+
+            <div class="button-row">
+              <button class="primary-button" id="loadReportButton" type="submit">Raporu Getir</button>
+              <button class="ghost-button" id="clearReportDatesButton" type="button">Tüm Zamanlar</button>
+            </div>
+            <div class="form-message is-error" id="reportMessage" hidden></div>
+          </form>
+
+          <div class="summary-strip report-summary-grid" id="reportSummary">
+            <div>
+              <span>Toplam Sipariş</span>
+              <strong id="reportTotalOrdersText">0</strong>
+            </div>
+            <div>
+              <span>Teslim Edilen</span>
+              <strong id="reportDeliveredOrdersText">0</strong>
+            </div>
+            <div>
+              <span>İptal</span>
+              <strong id="reportCancelledOrdersText">0</strong>
+            </div>
+            <div>
+              <span>Aktif Sipariş</span>
+              <strong id="reportActiveOrdersText">0</strong>
+            </div>
+            <div>
+              <span>Teslim Edilen Ciro</span>
+              <strong id="reportDeliveredRevenueText">0,00 TL</strong>
+            </div>
+            <div>
+              <span>Gönderim Geliri</span>
+              <strong id="reportDeliveryFeesText">0,00 TL</strong>
+            </div>
+            <div>
+              <span>Ortalama Sepet</span>
+              <strong id="reportAverageOrderText">0,00 TL</strong>
+            </div>
+            <div>
+              <span>Aktif Toplam</span>
+              <strong id="reportActiveGrandTotalText">0,00 TL</strong>
+            </div>
+          </div>
+
+          <div class="report-lists">
+            <div class="list-panel">
+              <div class="list-heading">
+                <h2>En Çok Satan Ürünler</h2>
+              </div>
+              <div class="record-list compact-list" id="topProductsList"></div>
+            </div>
+
+            <div class="list-panel">
+              <div class="list-heading">
+                <h2>Günlük Özet</h2>
+              </div>
+              <div class="record-list compact-list" id="dailyTotalsList"></div>
+            </div>
+          </div>
+        </section>
+
+        <form class="panel-form settings-form admin-section" id="settingsForm" data-section-panel="settings">
+          <div class="form-section">
+            <h3>Market Bilgileri</h3>
+            <label>
+              <span>Market adı</span>
+              <input name="market_name" required minlength="2" maxlength="120" />
+            </label>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Telefon</span>
+                <input name="phone" type="tel" maxlength="32" placeholder="0532 111 22 33" />
+              </label>
+              <label>
+                <span>WhatsApp numarası</span>
+                <input name="whatsapp_number" type="tel" maxlength="32" placeholder="0532 111 22 33" />
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Çalışma Durumu</h3>
+            <label class="toggle-row">
+              <span>
+                <strong>Market açık</strong>
+                <small>Kapalıyken backend yeni sipariş kabul etmez.</small>
+              </span>
+              <input name="is_open" type="checkbox" />
+            </label>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Açılış saati</span>
+                <input name="opening_time" type="time" />
+              </label>
+              <label>
+                <span>Kapanış saati</span>
+                <input name="closing_time" type="time" />
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Sipariş Kuralları</h3>
+            <div class="form-grid two-columns">
+              <label>
+                <span>Minimum sipariş tutarı</span>
+                <input name="minimum_order_amount" type="number" min="0" max="100000" step="0.01" required />
+              </label>
+              <label>
+                <span>Gönderim ücreti</span>
+                <input name="delivery_fee" type="number" min="0" max="10000" step="0.01" required />
+              </label>
+            </div>
+          </div>
+
+          <div class="summary-strip">
+            <div>
+              <span>Minimum Sipariş</span>
+              <strong id="minimumPreview">0,00 TL</strong>
+            </div>
+            <div>
+              <span>Gönderim</span>
+              <strong id="deliveryPreview">0,00 TL</strong>
+            </div>
+          </div>
+
+          <div class="form-message" id="settingsMessage" hidden></div>
+          <button class="primary-button" id="saveButton" type="submit">Ayarları Kaydet</button>
+        </form>
+
+        <section class="admin-section split-section" id="categoriesSection" data-section-panel="categories" hidden>
+          <form class="panel-form" id="categoryForm">
+            <div>
+              <p class="eyebrow">Kategori</p>
+              <h2 id="categoryFormTitle">Kategori ekle</h2>
+            </div>
+
+            <input name="category_id" type="hidden" />
+
+            <label>
+              <span>Kategori adı</span>
+              <input name="name" required minlength="2" maxlength="120" placeholder="Meyve Sebze" />
+            </label>
+
+            <label>
+              <span>Slug</span>
+              <input name="slug" maxlength="140" placeholder="Boş bırakırsan otomatik oluşur" />
+            </label>
+
+            <label>
+              <span>Açıklama</span>
+              <input name="description" maxlength="500" placeholder="Kısa kategori açıklaması" />
+            </label>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Sıralama</span>
+                <input name="display_order" type="number" min="0" max="100000" step="1" value="0" required />
+              </label>
+              <label class="toggle-row compact">
+                <span>
+                  <strong>Aktif</strong>
+                  <small>Müşteri kataloğunda görünür.</small>
+                </span>
+                <input name="is_active" type="checkbox" checked />
+              </label>
+            </div>
+
+            <div class="form-message" id="categoryMessage" hidden></div>
+            <div class="button-row">
+              <button class="primary-button" type="submit">Kaydet</button>
+              <button class="ghost-button" id="cancelCategoryEditButton" type="button">Temizle</button>
+            </div>
+          </form>
+
+          <div class="list-panel">
+            <div class="list-heading">
+              <h2>Kategoriler</h2>
+              <button class="ghost-button" id="refreshCategoriesButton" type="button">Yenile</button>
+            </div>
+            <div class="record-list" id="categoriesList"></div>
+          </div>
+        </section>
+
+        <section class="admin-section split-section" id="productsSection" data-section-panel="products" hidden>
+          <form class="panel-form" id="productForm">
+            <div>
+              <p class="eyebrow">Ürün</p>
+              <h2 id="productFormTitle">Ürün ekle</h2>
+            </div>
+
+            <input name="product_id" type="hidden" />
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Ürün adı</span>
+                <input name="name" required minlength="2" maxlength="160" placeholder="Elma 1 kg" />
+              </label>
+              <label>
+                <span>Kategori</span>
+                <select name="category_id" id="productCategorySelect"></select>
+              </label>
+            </div>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Fiyat</span>
+                <input name="price" type="number" min="0" max="1000000" step="0.01" required />
+              </label>
+              <label>
+                <span>Stok</span>
+                <input name="stock_quantity" type="number" min="0" max="999999" step="1" required />
+              </label>
+            </div>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Slug</span>
+                <input name="slug" maxlength="180" placeholder="Boş bırakırsan otomatik oluşur" />
+              </label>
+              <label>
+                <span>SKU</span>
+                <input name="sku" maxlength="80" placeholder="STK-001" />
+              </label>
+            </div>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Fotoğraf yükle</span>
+                <input id="productImageFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+              </label>
+              <div class="upload-control">
+                <button class="ghost-button" id="uploadProductImageButton" type="button">Fotoğrafı Yükle</button>
+                <small>JPG, PNG, WebP veya GIF. En fazla 2 MB.</small>
+              </div>
+            </div>
+            <div class="form-message" id="productImageUploadMessage" hidden></div>
+
+            <label>
+              <span>Fotoğraf URL</span>
+              <input name="image_url" maxlength="500" placeholder="Yükleyebilir veya https://... yazabilirsin" />
+            </label>
+
+            <label>
+              <span>Açıklama</span>
+              <input name="description" maxlength="3000" placeholder="Kısa ürün açıklaması" />
+            </label>
+
+            <label class="toggle-row compact">
+              <span>
+                <strong>Aktif</strong>
+                <small>Pasif ürün müşteri kataloğunda görünmez.</small>
+              </span>
+              <input name="is_active" type="checkbox" checked />
+            </label>
+
+            <div class="form-message" id="productMessage" hidden></div>
+            <div class="button-row">
+              <button class="primary-button" type="submit">Kaydet</button>
+              <button class="ghost-button" id="cancelProductEditButton" type="button">Temizle</button>
+            </div>
+          </form>
+
+          <div class="list-panel">
+            <div class="list-heading">
+              <h2>Ürünler</h2>
+              <button class="ghost-button" id="refreshProductsButton" type="button">Yenile</button>
+            </div>
+            <label class="search-box">
+              <span>Ürün ara</span>
+              <input id="productSearchInput" type="search" placeholder="Ürün adı..." />
+            </label>
+            <div class="record-list" id="productsList"></div>
+          </div>
+        </section>
+
+        <section class="admin-section split-section" id="deliveryAreasSection" data-section-panel="delivery-areas" hidden>
+          <form class="panel-form" id="deliveryAreaForm">
+            <div>
+              <p class="eyebrow">Teslimat Bölgesi</p>
+              <h2 id="deliveryAreaFormTitle">Bölge ekle</h2>
+            </div>
+
+            <input name="delivery_area_id" type="hidden" />
+
+            <label>
+              <span>Bölge adı</span>
+              <input name="name" required minlength="2" maxlength="120" placeholder="Merkez" />
+            </label>
+
+            <label>
+              <span>Slug</span>
+              <input name="slug" maxlength="140" placeholder="Boş bırakırsan otomatik oluşur" />
+            </label>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>Sıralama</span>
+                <input name="display_order" type="number" min="0" max="100000" step="1" value="0" required />
+              </label>
+              <label class="toggle-row compact">
+                <span>
+                  <strong>Aktif</strong>
+                  <small>Checkout listesinde görünür.</small>
+                </span>
+                <input name="is_active" type="checkbox" checked />
+              </label>
+            </div>
+
+            <div class="form-message" id="deliveryAreaMessage" hidden></div>
+            <div class="button-row">
+              <button class="primary-button" type="submit">Kaydet</button>
+              <button class="ghost-button" id="cancelDeliveryAreaEditButton" type="button">Temizle</button>
+            </div>
+          </form>
+
+          <div class="list-panel">
+            <div class="list-heading">
+              <h2>Teslimat Bölgeleri</h2>
+              <button class="ghost-button" id="refreshDeliveryAreasButton" type="button">Yenile</button>
+            </div>
+            <div class="record-list" id="deliveryAreasList"></div>
+          </div>
+        </section>
+
+        <section class="admin-section split-section" id="usersSection" data-section-panel="users" hidden>
+          <form class="panel-form" id="userForm">
+            <div>
+              <p class="eyebrow">Kullanıcı</p>
+              <h2 id="userFormTitle">Kullanıcı ekle</h2>
+            </div>
+
+            <input name="user_id" type="hidden" />
+
+            <label>
+              <span>Kullanıcı adı</span>
+              <input name="username" required minlength="2" maxlength="80" placeholder="kasiyer" />
+            </label>
+
+            <label>
+              <span>Ad soyad</span>
+              <input name="full_name" required minlength="2" maxlength="120" placeholder="Kasiyer Bir" />
+            </label>
+
+            <label>
+              <span>Rol</span>
+              <select name="role" required>
+                <option value="EMPLOYEE">Çalışan</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Şifre</span>
+              <input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" placeholder="En az 8 karakter" required />
+            </label>
+
+            <label class="toggle-row compact">
+              <span>
+                <strong>Aktif</strong>
+                <small>Pasif kullanıcı giriş yapamaz.</small>
+              </span>
+              <input name="is_active" type="checkbox" checked />
+            </label>
+
+            <div class="form-message" id="userMessage" hidden></div>
+            <div class="button-row">
+              <button class="primary-button" type="submit">Kaydet</button>
+              <button class="ghost-button" id="cancelUserEditButton" type="button">Temizle</button>
+            </div>
+          </form>
+
+          <div class="list-panel">
+            <div class="list-heading">
+              <h2>Kullanıcılar</h2>
+              <button class="ghost-button" id="refreshUsersButton" type="button">Yenile</button>
+            </div>
+            <div class="record-list" id="usersList"></div>
+          </div>
+        </section>
+
+        <section class="admin-section audit-section" id="auditLogsSection" data-section-panel="audit-logs" hidden>
+          <div class="list-panel">
+            <div class="list-heading">
+              <div>
+                <p class="eyebrow">Kayıtlar</p>
+                <h2>İşlem geçmişi</h2>
+              </div>
+              <button class="ghost-button" id="refreshAuditLogsButton" type="button">Yenile</button>
+            </div>
+            <div class="record-list" id="auditLogsList"></div>
+          </div>
+        </section>
+
+        <section class="admin-section backup-section" id="backupSection" data-section-panel="backups" hidden>
+          <div class="list-panel">
+            <div class="list-heading">
+              <div>
+                <p class="eyebrow">Güvenlik</p>
+                <h2>Yedekleme</h2>
+              </div>
+            </div>
+
+            <div class="backup-grid">
+              <div class="backup-box">
+                <h3>Yedek indir</h3>
+                <p>Ürünler, siparişler, ayarlar, kullanıcılar ve yüklenen görseller tek ZIP dosyası olarak iner.</p>
+                <button class="primary-button" id="downloadBackupButton" type="button">Yedek İndir</button>
+              </div>
+
+              <div class="backup-box">
+                <h3>Yedekten geri yükle</h3>
+                <p>Seçilen yedek mevcut verilerin yerine geçer. Bu işlemden önce yeni bir yedek almak iyi olur.</p>
+                <label>
+                  <span>Yedek ZIP dosyası</span>
+                  <input id="restoreBackupFileInput" type="file" accept=".zip,application/zip" />
+                </label>
+                <button class="danger-button" id="restoreBackupButton" type="button">Geri Yükle</button>
+              </div>
+            </div>
+
+            <div class="form-message" id="backupMessage" hidden></div>
+          </div>
+        </section>
+
+        <section class="admin-section account-section" id="accountSection" data-section-panel="account" hidden>
+          <div class="account-grid">
+            <div class="list-panel">
+              <div class="list-heading">
+                <div>
+                  <p class="eyebrow">Hesap</p>
+                  <h2>Oturum bilgileri</h2>
+                </div>
+              </div>
+
+              <div class="summary-strip account-summary-grid">
+                <div>
+                  <span>Kullanıcı adı</span>
+                  <strong id="accountUsernameText">-</strong>
+                </div>
+                <div>
+                  <span>Ad soyad</span>
+                  <strong id="accountFullNameText">-</strong>
+                </div>
+                <div>
+                  <span>Rol</span>
+                  <strong id="accountRoleText">-</strong>
+                </div>
+              </div>
+            </div>
+
+            <form class="panel-form" id="passwordChangeForm">
+              <div>
+                <p class="eyebrow">Şifre</p>
+                <h2>Şifre değiştir</h2>
+              </div>
+
+              <label>
+                <span>Mevcut şifre</span>
+                <input name="current_password" type="password" autocomplete="current-password" required minlength="8" maxlength="200" />
+              </label>
+
+              <label>
+                <span>Yeni şifre</span>
+                <input name="new_password" type="password" autocomplete="new-password" required minlength="8" maxlength="200" />
+              </label>
+
+              <label>
+                <span>Yeni şifre tekrar</span>
+                <input name="confirm_password" type="password" autocomplete="new-password" required minlength="8" maxlength="200" />
+              </label>
+
+              <div class="form-message" id="passwordChangeMessage" hidden></div>
+              <button class="primary-button" id="changePasswordButton" type="submit">Şifreyi Değiştir</button>
+            </form>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

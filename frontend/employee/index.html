@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Çalışan Paneli</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Market Operasyon</p>
+        <h1>Çalışan Paneli</h1>
+      </div>
+      <button class="ghost-button" id="logoutButton" type="button" hidden>Çıkış</button>
+    </header>
+
+    <main class="app-shell">
+      <section class="login-panel" id="loginPanel">
+        <form class="login-form" id="loginForm">
+          <div>
+            <p class="eyebrow">Giriş</p>
+            <h2>Siparişleri yönet</h2>
+          </div>
+          <label>
+            <span>Kullanıcı adı</span>
+            <input name="username" autocomplete="username" value="employee" required />
+          </label>
+          <label>
+            <span>Şifre</span>
+            <input name="password" type="password" autocomplete="current-password" required minlength="8" />
+          </label>
+          <div class="form-message" id="loginMessage" hidden></div>
+          <button class="primary-button" type="submit">Giriş Yap</button>
+        </form>
+      </section>
+
+      <section class="orders-panel" id="ordersPanel" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Siparişler</p>
+            <h2 id="ordersTitle">Yeni Siparişler</h2>
+          </div>
+          <button class="ghost-button" id="refreshButton" type="button">Yenile</button>
+        </div>
+
+        <div class="status-tabs" id="statusTabs" aria-label="Sipariş durumları">
+          <button class="status-tab is-active" type="button" data-status="NEW">Yeni</button>
+          <button class="status-tab" type="button" data-status="PREPARING">Hazırlanıyor</button>
+          <button class="status-tab" type="button" data-status="ON_THE_WAY">Yolda</button>
+          <button class="status-tab" type="button" data-status="DELIVERED">Tamamlandı</button>
+          <button class="status-tab" type="button" data-status="CANCELLED">İptal</button>
+        </div>
+
+        <div class="orders-meta">
+          <span id="userText"></span>
+          <strong id="orderCount">0 sipariş</strong>
+        </div>
+
+        <div class="orders-list" id="ordersList"></div>
+      </section>
+    </main>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
