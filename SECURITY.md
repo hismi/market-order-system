@@ -8,6 +8,8 @@ Bu projede kritik kurallar backend tarafinda uygulanir.
 - Siparis olusturulurken urun fiyatlari veritabanindan tekrar okunur.
 - Minimum siparis tutari veritabanindaki `market_settings.minimum_order_amount` alanindan okunur.
 - Gonderim ucreti veritabanindaki `market_settings.delivery_fee` alanindan okunur ve her siparise eklenir.
+- Market acik/kapali durumu ve calisma saatleri backend tarafindan kontrol edilir; frontend'in gosterdigi duruma guvenilmez.
+- Calisma saati kontrolu `APP_TIMEZONE` degerine gore yapilir.
 - Online odeme alinmaz; kart bilgisi, odeme token'i veya odeme provider secret'i tutulmaz.
 - Urun stogu siparis onaylanirken backend tarafindan kontrol edilir ve dusulur.
 - Hazirlanan veya yoldaki siparis iptal edilirse stok backend tarafindan geri eklenir.

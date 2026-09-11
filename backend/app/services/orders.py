@@ -10,7 +10,11 @@ from app.models.user import User
 from app.schemas.order import OrderCreate
 from app.services.audit import write_audit_log
 from app.services.delivery_areas import get_active_delivery_area
-from app.services.market_settings import get_market_settings
+from app.services.market_settings import (
+    OUTSIDE_WORKING_HOURS_REASON,
+    get_market_acceptance_status,
+    get_market_settings,
+)
 from app.services.pricing import PricingError, calculate_cart_totals
 
 VALID_STATUSES = {"NEW", "PREPARING", "ON_THE_WAY", "DELIVERED", "CANCELLED"}
@@ -37,7 +41,10 @@ CANCELLATION_REASONS = {
 
 def create_order(db: Session, payload: OrderCreate) -> Order:
     settings = get_market_settings(db)
-    if not settings.is_open:
+    market_status = get_market_acceptance_status(settings)
+    if not market_status.accepting_orders:
+        if market_status.closed_reason == OUTSIDE_WORKING_HOURS_REASON:
+            raise PricingError("Market calisma saatleri disinda siparis kabul etmiyor.")
         raise PricingError("Market su anda kapali.")
 
     delivery_area = get_active_delivery_area(db, payload.delivery_area_id)

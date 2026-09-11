@@ -1,5 +1,6 @@
 const API_BASE_URL = "http://127.0.0.1:8000";
 const TOKEN_STORAGE_KEY = "market-order-system-employee-token";
+const ORDER_REFRESH_INTERVAL_MS = 15000;
 
 const statusLabels = {
   NEW: "Yeni",
@@ -27,6 +28,9 @@ const state = {
   orders: [],
 };
 
+let orderRefreshTimer = null;
+let isLoadingOrders = false;
+
 const elements = {
   loginPanel: document.querySelector("#loginPanel"),
   loginForm: document.querySelector("#loginForm"),
@@ -36,6 +40,7 @@ const elements = {
   statusTabs: document.querySelector("#statusTabs"),
   ordersList: document.querySelector("#ordersList"),
   orderCount: document.querySelector("#orderCount"),
+  autoRefreshText: document.querySelector("#autoRefreshText"),
   userText: document.querySelector("#userText"),
   refreshButton: document.querySelector("#refreshButton"),
   logoutButton: document.querySelector("#logoutButton"),
@@ -51,7 +56,7 @@ function money(value) {
 function bindEvents() {
   elements.loginForm.addEventListener("submit", login);
   elements.logoutButton.addEventListener("click", logout);
-  elements.refreshButton.addEventListener("click", loadOrders);
+  elements.refreshButton.addEventListener("click", () => loadOrders());
   elements.statusTabs.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-status]");
     if (!button) return;
@@ -109,6 +114,7 @@ async function login(event) {
 }
 
 function logout() {
+  stopOrderAutoRefresh();
   state.token = null;
   state.currentUser = null;
   state.orders = [];
@@ -127,16 +133,56 @@ function showOrders() {
   elements.ordersPanel.hidden = false;
   elements.logoutButton.hidden = false;
   elements.userText.textContent = `${state.currentUser.full_name} (${state.currentUser.role})`;
+  startOrderAutoRefresh();
 }
 
-async function loadOrders() {
-  elements.ordersList.innerHTML = `<div class="empty-state">Siparişler yükleniyor.</div>`;
+async function loadOrders(options = {}) {
+  const silent = options.silent === true;
+  if (isLoadingOrders && silent) return;
+
+  isLoadingOrders = true;
+  if (!silent) {
+    elements.ordersList.innerHTML = `<div class="empty-state">Siparişler yükleniyor.</div>`;
+  }
+
   try {
     state.orders = await apiFetch(`/api/employee/orders?status=${state.selectedStatus}`);
     renderOrders();
+    updateAutoRefreshText();
   } catch (error) {
-    elements.ordersList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    if (error.status === 401) {
+      logout();
+      return;
+    }
+
+    if (silent) {
+      updateAutoRefreshText("Bağlantı bekleniyor");
+    } else {
+      elements.ordersList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    }
+  } finally {
+    isLoadingOrders = false;
   }
+}
+
+function startOrderAutoRefresh() {
+  stopOrderAutoRefresh();
+  updateAutoRefreshText("Otomatik yenileme açık");
+  orderRefreshTimer = window.setInterval(
+    () => loadOrders({ silent: true }),
+    ORDER_REFRESH_INTERVAL_MS,
+  );
+}
+
+function stopOrderAutoRefresh() {
+  if (!orderRefreshTimer) return;
+  window.clearInterval(orderRefreshTimer);
+  orderRefreshTimer = null;
+}
+
+function updateAutoRefreshText(message) {
+  const text = message || `Son güncelleme ${formatClock(new Date())}`;
+  elements.autoRefreshText.textContent = text;
 }
 
 function renderStatusTabs() {
@@ -283,7 +329,10 @@ async function apiFetch(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data?.detail?.message || data?.detail || "İstek başarısız oldu.");
+    const message = data?.detail?.message || data?.detail || "İstek başarısız oldu.";
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -307,6 +356,12 @@ function timeAgo(value) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} saat önce`;
   return `${Math.floor(hours / 24)} gün önce`;
+}
+
+function formatClock(value) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeStyle: "medium",
+  }).format(value);
 }
 
 function escapeHtml(value) {

@@ -186,10 +186,17 @@ select:focus {
 .orders-meta {
   color: var(--muted);
   font-weight: 800;
+  flex-wrap: wrap;
 }
 
 .orders-meta strong {
   color: var(--ink);
+}
+
+.auto-refresh-text {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
 }
 
 .status-tabs {

@@ -1,5 +1,6 @@
 const API_BASE_URL = "http://127.0.0.1:8000";
 const CART_STORAGE_KEY = "market-order-system-cart";
+const MARKET_SETTINGS_REFRESH_INTERVAL_MS = 60000;
 
 const statusLabels = {
   NEW: "Yeni",
@@ -31,10 +32,14 @@ const state = {
     market_name: "Yerel Market",
     whatsapp_number: null,
     is_open: true,
+    accepting_orders: true,
+    closed_reason: null,
     minimum_order_amount: "300.00",
     delivery_fee: "50.00",
   },
 };
+
+let marketSettingsRefreshTimer = null;
 
 const elements = {
   marketName: document.querySelector("#marketName"),
@@ -116,6 +121,7 @@ async function init() {
   }
 
   render();
+  startMarketSettingsRefresh();
 }
 
 function bindEvents() {
@@ -170,10 +176,46 @@ function render() {
   renderCart();
 }
 
+function startMarketSettingsRefresh() {
+  if (marketSettingsRefreshTimer) {
+    window.clearInterval(marketSettingsRefreshTimer);
+  }
+
+  marketSettingsRefreshTimer = window.setInterval(
+    refreshMarketSettings,
+    MARKET_SETTINGS_REFRESH_INTERVAL_MS,
+  );
+}
+
+async function refreshMarketSettings() {
+  try {
+    state.settings = await fetchJson("/api/market-settings/public");
+    renderMarketSettings();
+    renderProducts();
+    renderCart();
+  } catch {
+    // Sessiz gecilir; siparis olusturma sirasinda backend son karari yine verir.
+  }
+}
+
+function isAcceptingOrders() {
+  return state.settings.is_open !== false && state.settings.accepting_orders !== false;
+}
+
+function getClosedMarketMessage() {
+  if (state.settings.closed_reason === "OUTSIDE_WORKING_HOURS") {
+    return "Market şu anda çalışma saatleri dışında.";
+  }
+
+  return "Market şu anda kapalı.";
+}
+
 function renderMarketSettings() {
+  const acceptingOrders = isAcceptingOrders();
+
   elements.marketName.textContent = state.settings.market_name;
-  elements.marketStatus.textContent = state.settings.is_open ? "Açık" : "Kapalı";
-  elements.marketStatus.classList.toggle("is-closed", !state.settings.is_open);
+  elements.marketStatus.textContent = acceptingOrders ? "Açık" : "Kapalı";
+  elements.marketStatus.classList.toggle("is-closed", !acceptingOrders);
 
   const supportUrl = buildWhatsappSupportUrl(state.settings.whatsapp_number);
   elements.whatsappSupportLink.hidden = !supportUrl;
@@ -219,6 +261,7 @@ function getVisibleProducts() {
 
 function renderProducts() {
   const products = getVisibleProducts();
+  const acceptingOrders = isAcceptingOrders();
   elements.productCount.textContent = `${products.length} ürün`;
   elements.emptyState.hidden = products.length !== 0;
 
@@ -227,7 +270,7 @@ function renderProducts() {
       const stockText = product.is_in_stock
         ? `${product.stock_quantity} adet stokta`
         : "Stokta yok";
-      const disabled = product.is_in_stock ? "" : "disabled";
+      const disabled = product.is_in_stock && acceptingOrders ? "" : "disabled";
 
       return `
         <article class="product-card">
@@ -254,6 +297,8 @@ function renderProducts() {
 }
 
 function addToCart(productId) {
+  if (!isAcceptingOrders()) return;
+
   const product = state.products.find((item) => item.id === productId);
   if (!product || !product.is_in_stock) return;
 
@@ -354,14 +399,15 @@ function renderCart() {
       .join("");
   }
 
-  const hasCartItems = state.settings.is_open && totals.lines.length > 0;
+  const acceptingOrders = isAcceptingOrders();
+  const hasCartItems = acceptingOrders && totals.lines.length > 0;
   const canSubmit =
     hasCartItems && totals.subtotal >= totals.minimumOrderAmount;
   elements.checkoutButton.disabled = !hasCartItems;
   elements.submitOrderButton.disabled = !canSubmit;
 
-  if (!state.settings.is_open) {
-    elements.minimumMessage.textContent = "Market şu anda kapalı.";
+  if (!acceptingOrders) {
+    elements.minimumMessage.textContent = getClosedMarketMessage();
     elements.minimumMessage.classList.add("is-warning");
   } else if (!totals.lines.length) {
     elements.minimumMessage.textContent = `Minimum sipariş: ${money(totals.minimumOrderAmount)}`;
@@ -379,6 +425,11 @@ async function submitOrder(event) {
   event.preventDefault();
 
   const totals = getCartTotals();
+  if (!isAcceptingOrders()) {
+    showOrderResult(getClosedMarketMessage(), true);
+    renderCart();
+    return;
+  }
   if (!totals.lines.length || totals.subtotal < totals.minimumOrderAmount) return;
 
   elements.submitOrderButton.disabled = true;
@@ -434,7 +485,9 @@ async function submitOrder(event) {
   } finally {
     const updatedTotals = getCartTotals();
     elements.submitOrderButton.disabled =
-      !updatedTotals.lines.length || updatedTotals.subtotal < updatedTotals.minimumOrderAmount;
+      !isAcceptingOrders() ||
+      !updatedTotals.lines.length ||
+      updatedTotals.subtotal < updatedTotals.minimumOrderAmount;
   }
 }
 

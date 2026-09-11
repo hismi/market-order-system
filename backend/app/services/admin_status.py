@@ -10,7 +10,7 @@ from app.models.delivery_area import DeliveryArea
 from app.models.order import Order
 from app.models.product import Product
 from app.models.user import User
-from app.services.market_settings import get_market_settings
+from app.services.market_settings import get_market_acceptance_status, get_market_settings
 
 ACTIVE_ORDER_STATUSES = {"NEW", "PREPARING", "ON_THE_WAY"}
 BACKUP_AUDIT_ACTIONS = {"BACKUP_EXPORTED", "BACKUP_RESTORED"}
@@ -22,6 +22,10 @@ def build_admin_system_status(
     settings: Settings,
 ) -> dict[str, object]:
     market_settings = get_market_settings(db)
+    market_acceptance = get_market_acceptance_status(
+        market_settings,
+        app_settings=settings,
+    )
     last_order = get_last_order(db)
     last_audit_log = get_last_audit_log(db)
     last_backup_log = get_last_backup_log(db)
@@ -32,6 +36,9 @@ def build_admin_system_status(
         "app_env": settings.app_env,
         "market_name": market_settings.market_name,
         "market_is_open": market_settings.is_open,
+        "market_accepting_orders": market_acceptance.accepting_orders,
+        "market_closed_reason": market_acceptance.closed_reason,
+        "market_timezone": market_acceptance.timezone,
         "minimum_order_amount": market_settings.minimum_order_amount,
         "delivery_fee": market_settings.delivery_fee,
         "delivery_fee_always_charged": True,

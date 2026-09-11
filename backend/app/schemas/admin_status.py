@@ -10,6 +10,9 @@ class AdminSystemStatusRead(BaseModel):
     app_env: str
     market_name: str
     market_is_open: bool
+    market_accepting_orders: bool
+    market_closed_reason: str | None
+    market_timezone: str
     minimum_order_amount: Decimal
     delivery_fee: Decimal
     delivery_fee_always_charged: bool

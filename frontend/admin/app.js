@@ -1,5 +1,6 @@
 const API_BASE_URL = "http://127.0.0.1:8000";
 const TOKEN_STORAGE_KEY = "market-order-system-admin-token";
+const ORDER_REFRESH_INTERVAL_MS = 15000;
 
 const statusLabels = {
   NEW: "Yeni",
@@ -77,6 +78,10 @@ const state = {
   productSearch: "",
 };
 
+let orderRefreshTimer = null;
+let isLoadingOrders = false;
+let isLoadingSystemStatus = false;
+
 const elements = {
   loginPanel: document.querySelector("#loginPanel"),
   loginForm: document.querySelector("#loginForm"),
@@ -109,6 +114,7 @@ const elements = {
   activeGrandTotalText: document.querySelector("#activeGrandTotalText"),
   ordersList: document.querySelector("#ordersList"),
   refreshOrdersButton: document.querySelector("#refreshOrdersButton"),
+  orderAutoRefreshText: document.querySelector("#orderAutoRefreshText"),
   orderStatusFilter: document.querySelector("#orderStatusFilter"),
 
   reportFilterForm: document.querySelector("#reportFilterForm"),
@@ -187,9 +193,9 @@ function bindEvents() {
   elements.logoutButton.addEventListener("click", logout);
   elements.sectionTabs.addEventListener("click", switchSectionFromClick);
 
-  elements.refreshSystemStatusButton.addEventListener("click", loadSystemStatus);
+  elements.refreshSystemStatusButton.addEventListener("click", () => loadSystemStatus());
 
-  elements.refreshOrdersButton.addEventListener("click", loadOrders);
+  elements.refreshOrdersButton.addEventListener("click", () => loadOrders());
   elements.orderStatusFilter.addEventListener("change", () => {
     state.orderStatusFilter = elements.orderStatusFilter.value;
     loadOrders();
@@ -281,6 +287,7 @@ async function login(event) {
 }
 
 function logout() {
+  stopOrderAutoRefresh();
   state.token = null;
   state.currentUser = null;
   state.settings = null;
@@ -310,6 +317,7 @@ function showAdmin() {
   elements.userText.textContent = `${state.currentUser.full_name} (${state.currentUser.role})`;
   fillAccountPanel();
   renderActiveSection();
+  startOrderAutoRefresh();
 }
 
 function fillAccountPanel() {
@@ -352,13 +360,29 @@ function renderActiveSection() {
   }
 }
 
-async function loadSystemStatus() {
-  elements.systemStatusMessage.hidden = true;
+async function loadSystemStatus(options = {}) {
+  const silent = options.silent === true;
+  if (isLoadingSystemStatus && silent) return;
+
+  isLoadingSystemStatus = true;
+  if (!silent) {
+    elements.systemStatusMessage.hidden = true;
+  }
+
   try {
     state.systemStatus = await apiFetch("/api/admin/system-status");
     renderSystemStatus();
   } catch (error) {
-    showSystemStatusMessage(error.message, true);
+    if (error.status === 401) {
+      logout();
+      return;
+    }
+
+    if (!silent) {
+      showSystemStatusMessage(error.message, true);
+    }
+  } finally {
+    isLoadingSystemStatus = false;
   }
 }
 
@@ -367,7 +391,8 @@ function renderSystemStatus() {
   if (!status) return;
 
   elements.statusApiText.textContent = status.api_status === "OK" ? "Çalışıyor" : status.api_status;
-  elements.statusMarketText.textContent = status.market_is_open ? "Açık" : "Kapalı";
+  elements.statusMarketText.textContent =
+    status.market_accepting_orders ? "Siparişe açık" : formatMarketClosedReason(status.market_closed_reason);
   elements.statusEnvText.textContent = status.app_env;
   elements.statusPaymentText.textContent = status.online_payment_enabled
     ? "Online ödeme açık"
@@ -431,6 +456,13 @@ function renderSystemChecks(status) {
       detail: money(status.minimum_order_amount),
     },
     {
+      label: "Çalışma saatleri",
+      passed: status.market_accepting_orders === true,
+      detail: status.market_accepting_orders
+        ? `Açık saat dilimi (${status.market_timezone})`
+        : formatMarketClosedReason(status.market_closed_reason),
+    },
+    {
       label: "WhatsApp kullanımı",
       passed: status.whatsapp_mode === "LIVE_SUPPORT_ONLY",
       detail: "Canlı destek",
@@ -455,8 +487,15 @@ function renderSystemChecks(status) {
   `).join("");
 }
 
-async function loadOrders() {
-  elements.ordersList.innerHTML = `<div class="empty-state">Siparişler yükleniyor.</div>`;
+async function loadOrders(options = {}) {
+  const silent = options.silent === true;
+  if (isLoadingOrders && silent) return;
+
+  isLoadingOrders = true;
+  if (!silent) {
+    elements.ordersList.innerHTML = `<div class="empty-state">Siparişler yükleniyor.</div>`;
+  }
+
   try {
     const query = state.orderStatusFilter
       ? `?status=${encodeURIComponent(state.orderStatusFilter)}`
@@ -469,9 +508,41 @@ async function loadOrders() {
     state.orders = orders;
     renderOrderSummary();
     renderOrders();
+    updateOrderAutoRefreshText();
   } catch (error) {
-    elements.ordersList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    if (error.status === 401) {
+      logout();
+      return;
+    }
+
+    if (silent) {
+      updateOrderAutoRefreshText("Bağlantı bekleniyor");
+    } else {
+      elements.ordersList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    }
+  } finally {
+    isLoadingOrders = false;
   }
+}
+
+function startOrderAutoRefresh() {
+  stopOrderAutoRefresh();
+  updateOrderAutoRefreshText("Otomatik yenileme açık");
+  orderRefreshTimer = window.setInterval(() => {
+    loadOrders({ silent: true });
+    loadSystemStatus({ silent: true });
+  }, ORDER_REFRESH_INTERVAL_MS);
+}
+
+function stopOrderAutoRefresh() {
+  if (!orderRefreshTimer) return;
+  window.clearInterval(orderRefreshTimer);
+  orderRefreshTimer = null;
+}
+
+function updateOrderAutoRefreshText(message) {
+  const text = message || `Son güncelleme ${formatClock(new Date())}`;
+  elements.orderAutoRefreshText.textContent = text;
 }
 
 function renderOrderSummary() {
@@ -1433,7 +1504,9 @@ async function apiFetch(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(data));
+    const error = new Error(getApiErrorMessage(data));
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -1519,6 +1592,24 @@ function formatDateTime(value) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatClock(value) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeStyle: "medium",
+  }).format(value);
+}
+
+function formatMarketClosedReason(reason) {
+  if (reason === "OUTSIDE_WORKING_HOURS") {
+    return "Çalışma saati dışında";
+  }
+
+  if (reason === "MANUALLY_CLOSED") {
+    return "Manuel kapalı";
+  }
+
+  return "Kapalı";
 }
 
 function formatDate(value) {

@@ -61,6 +61,9 @@ def test_admin_system_status_returns_operational_summary(
     assert data["api_status"] == "OK"
     assert data["market_name"] == "Test Market"
     assert data["market_is_open"] is True
+    assert data["market_accepting_orders"] is True
+    assert data["market_closed_reason"] is None
+    assert data["market_timezone"] == "Europe/Istanbul"
     assert data["minimum_order_amount"] == "250.00"
     assert data["delivery_fee"] == "65.00"
     assert data["delivery_fee_always_charged"] is True

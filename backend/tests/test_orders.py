@@ -1,12 +1,15 @@
 import re
+from datetime import datetime, time, timezone
 from decimal import Decimal
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models.delivery_area import DeliveryArea
 from app.models.order import Order
 from app.models.product import Product
+from app.services import market_settings as market_settings_service
 from app.services.market_settings import get_market_settings
 
 
@@ -255,6 +258,57 @@ def test_create_order_rejects_minimum_order_not_met(
         "minimum_order_amount": "300.00",
         "subtotal": "200.00",
         "remaining": "100.00",
+    }
+
+
+def test_create_order_rejects_outside_working_hours(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = get_market_settings(db_session)
+    settings.minimum_order_amount = Decimal("10.00")
+    settings.delivery_fee = Decimal("50.00")
+    settings.is_open = True
+    settings.opening_time = time(9, 0)
+    settings.closing_time = time(10, 0)
+    area = DeliveryArea(name="Merkez", slug="merkez", is_active=True)
+    product = Product(
+        name="Ekmek",
+        slug="ekmek",
+        price=Decimal("12.00"),
+        stock_quantity=20,
+        is_active=True,
+    )
+    db_session.add_all([area, product])
+    db_session.commit()
+
+    monkeypatch.setattr(
+        market_settings_service,
+        "get_current_market_datetime",
+        lambda _settings: datetime(2026, 9, 11, 11, 0, tzinfo=timezone.utc),
+    )
+
+    response = client.post(
+        "/api/orders",
+        json={
+            "items": [{"product_id": product.id, "quantity": 1}],
+            "customer_first_name": "Sait",
+            "customer_last_name": "Musteri",
+            "phone": "0532 111 22 33",
+            "delivery_area_id": area.id,
+            "neighborhood": "Merkez Mahallesi",
+            "street": "Market Sokak",
+            "address_line": "Merkez Mahallesi Market Sokak No 10",
+            "payment_method": "CASH_ON_DELIVERY",
+            "unavailable_policy": "REMOVE_ITEM",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == {
+        "code": "ORDER_REJECTED",
+        "message": "Market calisma saatleri disinda siparis kabul etmiyor.",
     }
 
 

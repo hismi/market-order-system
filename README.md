@@ -40,6 +40,8 @@ Asama 2-4 baslangici:
 - Adminin kendi sifresini mevcut sifreyle degistirebilmesi eklendi.
 - Login rate limit eklendi.
 - Production guvenlik ayarlari kontrolu eklendi.
+- Market calisma saatleri backend tarafindan otomatik siparis kabul kuralina baglandi.
+- Musteri ekrani market durumunu periyodik yeniler; admin ve calisan siparis listeleri otomatik yenilenir.
 
 ## Calistirma
 
@@ -55,7 +57,7 @@ Copy-Item .env.example .env
 .\.venv\Scripts\uvicorn app.main:app --reload
 ```
 
-`backend/.env` dosyasinda `JWT_SECRET`, `SEED_ADMIN_PASSWORD` ve `SEED_EMPLOYEE_PASSWORD` degerlerini kendin belirlemelisin. Guclu secret uretmek icin PowerShell'de su komut kullanilabilir:
+`backend/.env` dosyasinda `JWT_SECRET`, `SEED_ADMIN_PASSWORD` ve `SEED_EMPLOYEE_PASSWORD` degerlerini kendin belirlemelisin. `APP_TIMEZONE` varsayilan olarak `Europe/Istanbul` gelir; farkli ulke veya sehir icin bunu degistirebilirsin. Guclu secret uretmek icin PowerShell'de su komut kullanilabilir:
 
 ```powershell
 py -c "import secrets; print(secrets.token_urlsafe(48))"
@@ -144,9 +146,12 @@ Admin panelinden su ayarlar degistirilebilir:
 - Minimum siparis tutari
 - Gonderim ucreti
 
+Market acik olsa bile acilis/kapanis saatleri disindaysa backend yeni siparis kabul etmez. Saat kontrolu `APP_TIMEZONE` degerine gore yapilir.
+
 Admin panelindeki Sistem Durumu ekraninda su bilgiler gorulebilir:
 
 - API ve market acik/kapali durumu
+- Marketin su anda siparis kabul edip etmedigi
 - Online odemenin kapali oldugu ve sadece kapida odeme kullanildigi
 - Gonderim ucretinin her sipariste alindigi
 - Urun, kategori, teslimat bolgesi ve siparis ozetleri
@@ -176,6 +181,7 @@ Admin panelinden teslimat bolgesi tarafinda su islemler yapilabilir:
 Admin panelinden siparis tarafinda su islemler yapilabilir:
 
 - Siparisleri durumuna gore listeleme
+- Admin ve calisan panelinde siparis listesinin otomatik yenilenmesi
 - Aktif siparis, yeni siparis, teslim edilen ciro ve aktif toplam ozetini gorme
 - Yeni siparisi onaylama veya iptal etme
 - Onaylanan sipariste urun stoklarini otomatik dusme

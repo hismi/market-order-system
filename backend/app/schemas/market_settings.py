@@ -11,6 +11,9 @@ class PublicMarketSettingsRead(BaseModel):
     is_open: bool
     opening_time: time | None = None
     closing_time: time | None = None
+    accepting_orders: bool
+    closed_reason: str | None = None
+    timezone: str
     minimum_order_amount: Decimal
     delivery_fee: Decimal
 
