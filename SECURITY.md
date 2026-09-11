@@ -26,8 +26,8 @@ Bu projede kritik kurallar backend tarafinda uygulanir.
 - Database sifresi ve JWT secret kaynak koda yazilmaz.
 - Development icin `backend/.env.example` kopyalanarak `backend/.env` olusturulabilir.
 - Production icin `backend/.env.production.example` ornek alinmalidir.
-- Production modunda kisa, placeholder veya development `JWT_SECRET` ile uygulama baslamaz.
-- Production modunda varsayilan seed kullanici sifreleri kabul edilmez.
+- Production modunda kisa, bos, placeholder veya development `JWT_SECRET` ile uygulama baslamaz.
+- Production modunda varsayilan veya zayif seed kullanici sifreleri kabul edilmez.
 
 ## Sifre Degistirme
 

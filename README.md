@@ -50,8 +50,15 @@ cd "C:\Users\saith\Documents\New project\market-order-system\backend"
 py -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
 .\.venv\Scripts\pip install -r requirements.txt
+Copy-Item .env.example .env
 .\.venv\Scripts\python -m pytest
 .\.venv\Scripts\uvicorn app.main:app --reload
+```
+
+`backend/.env` dosyasinda `JWT_SECRET`, `SEED_ADMIN_PASSWORD` ve `SEED_EMPLOYEE_PASSWORD` degerlerini kendin belirlemelisin. Guclu secret uretmek icin PowerShell'de su komut kullanilabilir:
+
+```powershell
+py -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 Tarayicida:
@@ -87,12 +94,12 @@ Tarayicida:
 
 - Calisan paneli: http://127.0.0.1:5501/
 
-Local development girisi:
+Local development calisan girisi:
 
 - Kullanici adi: `employee`
-- Sifre: `Employee12345`
+- Sifre: `backend/.env` icinde belirledigin `SEED_EMPLOYEE_PASSWORD`
 
-Production'da bu bilgiler mutlaka degistirilmelidir.
+Production'da development sifreleri kullanilmamalidir.
 
 ## Production Guvenlik
 
@@ -101,15 +108,9 @@ Canli ortama gecmeden once `backend/.env.production.example` dosyasi ornek alinm
 Production modunda uygulama su riskli ayarlarla baslamaz:
 
 - Eksik, kisa veya placeholder `JWT_SECRET`
-- Varsayilan `Admin12345` veya `Employee12345` seed sifreleri
+- Varsayilan veya zayif seed sifreleri
 - `CORS_ORIGINS=*`
 - `CORS_ORIGINS` icinde `localhost` veya `127.0.0.1`
-
-Guclu secret uretmek icin PowerShell'de su komut kullanilabilir:
-
-```powershell
-py -c "import secrets; print(secrets.token_urlsafe(48))"
-```
 
 Login rate limit varsayilani:
 
@@ -131,7 +132,7 @@ Tarayicida:
 Local development admin girisi:
 
 - Kullanici adi: `admin`
-- Sifre: `Admin12345`
+- Sifre: `backend/.env` icinde belirledigin `SEED_ADMIN_PASSWORD`
 
 Admin panelinden su ayarlar degistirilebilir:
 
